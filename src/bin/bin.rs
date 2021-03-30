@@ -18,6 +18,7 @@ fn main() {
         .add_plugin(bevy_stl::StlPlugin)
         .add_plugin(bevy_mod_picking::PickingPlugin)
         .add_plugin(bevy_mod_picking::DebugPickingPlugin)
-        .add_startup_system((tawlalib::board::load_assets.system().chain(tawlalib::board::build_board.system())))
+        .init_resource::<tawlalib::TawlaAssets>()
+        .add_startup_system(tawlalib::build_board.system())
         .run();
 }
