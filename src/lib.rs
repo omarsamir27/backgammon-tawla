@@ -1,4 +1,6 @@
-mod board;
+pub use board::*;
 
-mod tawla_logic;
+pub mod board;
+
+pub mod tawla_logic;
 

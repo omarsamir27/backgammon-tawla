@@ -6,20 +6,25 @@ use bevy_mod_picking::PickableMesh;
 pub struct TawlaAssets {
     checker_mesh: Handle<Mesh>,
     board_paint: Handle<Texture>,
+    board_brown: Handle<StandardMaterial>,
+    checker_black : Handle<StandardMaterial>,
+    checker_white : Handle<StandardMaterial>
 }
 
-fn load_assets(commands: &mut Commands, asset_server: Res<AssetServer>) {
-    let checker_mesh: Handle<Mesh> = asset_server.load("mesh/checker.stl");
-    let board_paint: Handle<Texture> = asset_server.load("art/board.png");
+pub fn load_assets(commands: &mut Commands, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<StandardMaterial>>,) {
+    let checker_mesh: Handle<Mesh> = asset_server.load("../mesh/checker.stl");
+    let board_paint: Handle<Texture> = asset_server.load("../art/board.png");
     commands.insert_resource(TawlaAssets {
         checker_mesh,
         board_paint,
+        board_brown : materials.add(StandardMaterial::from(Color::rgb_u8(92, 64, 51))),
+        checker_black : materials.add(StandardMaterial::from(Color::rgb_u8(2, 2, 2))),
+        checker_white : materials.add(StandardMaterial::from(Color::rgb_u8(253, 253,253 )))
     });
 }
 
-fn build_board(
+ pub fn build_board(
     commands: &mut Commands,
-    asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     tawla_assets: Res<TawlaAssets>,
@@ -29,19 +34,17 @@ fn build_board(
         shaded: false,
         ..Default::default()
     });
-    let brown = materials.add(StandardMaterial::from(Color::rgb_u8(92, 64, 51)));
-    let checker_mesh: Handle<Mesh> = tawla_assets.checker_mesh.clone();
 
     /* Build Container Box*/
     commands.spawn(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Box::new(27., 31., 0.4))),
-        material: brown.clone(),
+        material: tawla_assets.board_brown.clone(),
         ..Default::default()
     });
     for i in (-1..=1).step_by(2) {
         commands.spawn(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Box::new(0.5, 31., 0.4))),
-            material: brown.clone(),
+            material: tawla_assets.board_brown.clone(),
             transform: Transform::from_translation(Vec3::new(i as f32 * 13.25, 0., 0.4)),
             ..Default::default()
         });
@@ -50,7 +53,7 @@ fn build_board(
     for i in (-1..=1).step_by(2) {
         commands.spawn(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Box::new(27., 0.5, 0.4))),
-            material: brown.clone(),
+            material: tawla_assets.board_brown.clone(),
             transform: Transform::from_translation(Vec3::new(0., i as f32 * 15.25, 0.4)),
             ..Default::default()
         });
@@ -69,13 +72,13 @@ fn build_board(
     for j in (-1..=1).step_by(2) {
         for k in (-1..=1).step_by(2) {
             for i in 0..=5 {
-                pos += 1;
+                position += 1;
                 commands
                     .spawn(PbrBundle {
-                        mesh: checker_mesh.clone(),
+                        mesh: tawla_assets.checker_mesh.clone(),
                         visible: Visible {
                             is_transparent: true,
-                            is_visible: false,
+                            is_visible: true,
                         },
                         transform: Transform::from_translation(Vec3::new(
                             (k * (12 - 2 * i)) as f32,
@@ -85,7 +88,7 @@ fn build_board(
                         ..Default::default()
                     })
                     .with(PickableMesh::default())
-                    .with(tawla_logic::Point::new(position))
+                    .with(tawla_logic::Point::new(position));
             }
         }
     }

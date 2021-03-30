@@ -4,6 +4,13 @@ version = "0.0.1"
 authors = ["omar samir"]
 edition = "2018"
 
+[[bin]]
+name = "tawlabin"
+path = "src/bin/bin.rs"
+
+[lib]
+name = "tawlalib"
+path = "src/lib.rs"
 
 [dependencies]
 bevy="0.4.0"
