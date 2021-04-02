@@ -5,13 +5,12 @@
     use std::cell::RefCell;
     use std::ops::{Deref, DerefMut};
     use std::thread::Thread;
-    use std::fmt;
-    use crate::tawla_logic::Color::{Black, White};
+    use crate::tawla_logic::CheckerColor::{Black, White};
 
-     pub(crate) struct Point {
-        position: u8,
-        checkers: u8,
-        occupant: Option<Color>,
+     pub struct Point {
+        pub(crate) position: u8,
+        pub(crate) checkers: u8,
+        pub(crate) occupant: Option<CheckerColor>,
     }
 
     impl Point {
@@ -23,7 +22,10 @@
             }
         }
     }
-
+    pub struct Checker{
+        pub(crate) position: u8,
+        pub(crate) owner: CheckerColor
+    }
 
     pub struct Dice {
         range: Uniform<i32>,
@@ -52,7 +54,7 @@
     }
 
     #[derive(PartialEq, Copy, Clone)]
-    pub enum Color {
+    pub enum CheckerColor {
         White, //White moves from Point 1 increasing
         Black, //Black moves from Point 24 decreasing
     }
@@ -64,11 +66,11 @@
     // impl Grid {
     //     pub fn new() -> Grid {
     //         let mut points = Vec::new();
-    //         points.push(Point::new(1, 15, Some(Color::White)));
+    //         points.push(Point::new(1, 15, Some(CheckerColor::White)));
     //         for i in 2..24 {
     //             points.push(Point::new(i, 0, None));
     //         }
-    //         points.push(Point::new(24, 15, Some(Color::Black)));
+    //         points.push(Point::new(24, 15, Some(CheckerColor::Black)));
     //         Grid { points }
     //     }
     //     pub fn possible_moves(&self, pos: u8, roll: (u8, u8)) -> Vec<u8> {
@@ -83,7 +85,7 @@
     //             .as_ref()
     //             .unwrap()
     //         {
-    //             Color::White => after
+    //             CheckerColor::White => after
     //                 .iter()
     //                 .filter(|other| {
     //                     ((other.occupant == current.occupant || other.occupant == None)
@@ -93,7 +95,7 @@
     //                 })
     //                 .map(|point| point.position)
     //                 .collect::<Vec<u8>>(),
-    //             Color::Black => before
+    //             CheckerColor::Black => before
     //                 .iter()
     //                 .filter(|other| {
     //                     ((other.occupant == current.occupant || other.occupant == None)
