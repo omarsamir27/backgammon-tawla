@@ -1,3 +1,4 @@
+
 use super::tawla_logic;
 use crate::tawla_logic::{Checker, Point};
 use bevy::prelude::*;
@@ -5,6 +6,9 @@ use bevy::render::camera::visible_entities_system;
 use bevy_mod_picking;
 use bevy_mod_picking::{Group, HighlightablePickMesh, PickSource, PickState, PickableMesh};
 use bevy_orbit_controls::OrbitCamera;
+use bevy::ecs::QueryError;
+use bevy::reflect::erased_serde::Serialize;
+use core::panicking::panic;
 
 #[derive(Debug)]
 pub struct TawlaAssets {
@@ -31,26 +35,111 @@ impl FromResources for TawlaAssets {
     }
 }
 #[derive(Default)]
-pub struct SelectedEntity {
+pub struct SelectedPoint {
+    entity: Option<Entity>,
+}
+#[derive(Default)]
+pub struct SelectedChecker {
     entity: Option<Entity>,
 }
 pub fn select_entity(
     pick_state: Res<PickState>,
     mouse_click: Res<Input<MouseButton>>,
-    mut selected_entity: ResMut<SelectedEntity>,
+    mut selected_point: ResMut<SelectedPoint>,
+    mut selected_checker : ResMut<SelectedChecker>,
+    points : Query<(Entity,&Point)>,
+    checkers : Query<(Entity,&Checker)>
 ) {
     if mouse_click.just_pressed(MouseButton::Left) == false {
         return;
     }
-    selected_entity.entity = match pick_state.top(Group::default()) {
-        Some((entity, _intersection)) => Some(*entity),
-        None => None,
+    if let Some((selected_entity,_intersection)) = pick_state.top(Group::default()){
+        // if let Ok(_) = points.get(*selected_entity){
+        //     selected_point.entity = Some(*selected_entity);
+        //     return;
+        // }
+        selected_point.entity = match points.get(*selected_entity).is_ok() && selected_checker.entity.is_some(){
+            true => Some(*selected_entity),
+            false => None
+        };
+        if let Ok(_) = checkers.get(*selected_entity){
+            selected_checker.entity = Some(*selected_entity);
+            return;
+        }
+    }
+    // selected_point.entity = match pick_state.top(Group::default()) {
+    //     Some((entity, _intersection)) => Some(*entity),
+    //     None => None,
+    // };
+}
+pub fn checker_translation(point :&Point) -> Vec3{
+    let x = match point.position{
+        1 | 24 => -12,
+        2 | 23 => -10,
+        3 | 22 => -8,
+        4 | 21 => -6,
+        5 | 20 => -4,
+        6 | 19 => -2,
+        7 | 18 => 2,
+        8 | 17 => 4,
+        9 | 16 => 6,
+        10 | 15 => 8,
+        11 | 14 => 10,
+        12 | 13 => 12,
+        _ => 0
     };
+    let down_pos = match point.position >= 1 && point.position <=12 {
+        true => -1,
+        false => 1
+    };
+    let y = match point.checkers{
+        0|5|10 => 14 ,
+        1|6|11 => 12 ,
+        2|7|12 => 10 ,
+        3|8|13 => 8 ,
+        4|9|14=> 6,
+        _ => 0
+    } * down_pos;
+
+    let z = match point.checkers{
+        0..=4 => 0.4,
+        5..=9 => 0.75,
+        10..=14 => 1.15,
+        _ => 0.
+    };
+    Vec3::new(x as f32 , y as f32 , z)
+}
+pub fn move_checker(
+    time : Res<Time>,
+    mut selected_checker: ResMut<SelectedChecker>,
+    mut selected_point : ResMut<SelectedPoint>,
+    mut points: Query<(Entity, &mut Point)>,
+    mut checkers: Query<(Entity, &mut Checker,&mut Transform)>,
+    pick_state: Res<PickState>,
+    mouse_click: Res<Input<MouseButton>>,
+) {
+    if  selected_checker.entity.is_none() || selected_point.entity.is_none() {
+        return;
+    }
+    let (_, mut checker, mut checker_transform) = checkers.get_mut(selected_checker.entity.unwrap()).unwrap();
+    let (_,mut point) = points.get_mut(selected_point.entity.unwrap()).unwrap();
+    let new_pos = checker_translation(&point);
+    let direction = new_pos  - checker_transform.translation;
+    if direction.length() > 0.1{
+        checker_transform.translation = new_pos ;
+    }
+    println!("{:?}",checker_transform.translation);
+    if checker_transform.translation == new_pos {
+        point.checkers += 1;
+        selected_checker.entity = None;
+        selected_point.entity = None;
+    }
+
 }
 
 pub fn color_point(
     pick_state: Res<PickState>,
-    selected_point: Res<SelectedEntity>,
+    selected_point: Res<SelectedPoint>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     points: Query<(Entity, &Point, &Handle<StandardMaterial>)>,
 ) {
@@ -70,7 +159,7 @@ pub fn color_point(
     }
 }
 pub fn color_checker(
-    selected_checker: Res<SelectedEntity>,
+    selected_checker: Res<SelectedChecker>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     checkers: Query<(Entity, &Checker, &Handle<StandardMaterial>)>,
     tawla_assets: Res<TawlaAssets>,
@@ -88,7 +177,6 @@ pub fn color_checker(
         }
     }
 }
-
 pub fn build_board(
     commands: &mut Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -135,8 +223,8 @@ pub fn build_board(
     /*End Paint*/
     /* Spawn Invisible Checkers at Points Top Vertex*/
     let mut position: u8 = 0;
-    for j in (-1..=1).step_by(2) {
-        for k in (-1..=1).step_by(2) {
+
+        for k in 0..4 {
             for i in 0..=5 {
                 position += 1;
                 commands
@@ -148,8 +236,19 @@ pub fn build_board(
                             is_visible: true,
                         },
                         transform: Transform::from_translation(Vec3::new(
-                            (k * (12 - 2 * i)) as f32,
-                            (4 * j) as f32,
+                            //(k * (12 - 2 * i)) as f32,
+                          match k {
+                              0 => (-12 + 2*i) as f32,
+                              1 => (2 + 2*i) as f32,
+                              2 => (12 -2*i) as f32,
+                              3 => (-2 - 2*i) as f32,
+                              _ => panic("HOW DID YOU REACH HERE")
+                          },
+                            match k {
+                                0|1 => -4 as f32,
+                                2|3 => 4 as f32,
+                                _ => panic("WHY ARE YOU HERE")
+                            },
                             0.4,
                         )),
                         ..Default::default()
@@ -158,7 +257,7 @@ pub fn build_board(
                     .with(PickableMesh::default());
             }
         }
-    }
+
     /* Points Spawned*/
     /*Spawn Checkers*/
 

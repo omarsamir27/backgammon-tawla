@@ -1,3 +1,5 @@
+#![feature(core_panic)]
+
 pub use board::*;
 
 pub mod board;

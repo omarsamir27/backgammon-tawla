@@ -22,9 +22,11 @@ fn main() {
         .add_plugin(bevy_stl::StlPlugin)
         .init_resource::<tawlalib::TawlaAssets>()
         .add_startup_system(tawlalib::build_board.system())
-        .init_resource::<board::SelectedEntity>()
+        .init_resource::<board::SelectedPoint>()
+        .init_resource::<board::SelectedChecker>()
         .add_system(select_entity.system())
         .add_system(color_point.system())
         .add_system(color_checker.system())
+        .add_system(board::move_checker.system())
         .run();
 }
